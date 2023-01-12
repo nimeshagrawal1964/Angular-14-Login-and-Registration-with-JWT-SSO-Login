@@ -10,6 +10,7 @@ export class LoginComponent implements OnInit {
     form!: FormGroup;
     loading = false;
     submitted = false;
+    token!: string|null;
 
     constructor(
         private formBuilder: FormBuilder,
@@ -23,6 +24,26 @@ export class LoginComponent implements OnInit {
         this.form = this.formBuilder.group({
             username: ['', Validators.required],
             password: ['', Validators.required]
+        });
+
+        this.route.queryParams.subscribe(params => {
+            let token = params['token'];
+            
+            if(token != null) {
+                this.accountService.moSso(token)
+                .pipe(first())
+                .subscribe({
+                    next: () => {
+                        // get return url from query parameters or default to home page
+                        const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/';
+                        this.router.navigateByUrl(returnUrl);
+                    },
+                    error: error => {
+                        this.alertService.error(error);
+                        this.loading = false;
+                    }
+                });
+            }
         });
     }
 
@@ -54,5 +75,9 @@ export class LoginComponent implements OnInit {
                     this.loading = false;
                 }
             });
+    }
+
+    miniOrangeSSO() {
+        window.location.href = 'http://localhost/test/?option=jwt_login&sp=Angular&relayState=';
     }
 }

@@ -2,6 +2,7 @@
 import { HttpRequest, HttpResponse, HttpHandler, HttpEvent, HttpInterceptor, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { delay, materialize, dematerialize } from 'rxjs/operators';
+import { JWTBuilder } from '@app/jwt-connector';
 
 // array in local storage for registered users
 const usersKey = 'angular-14-registration-login-example-users';
@@ -18,6 +19,8 @@ export class FakeBackendInterceptor implements HttpInterceptor {
             switch (true) {
                 case url.endsWith('/users/authenticate') && method === 'POST':
                     return authenticate();
+                case url.endsWith('/api/sso') && method === 'POST':
+                    return getUserByUsernameinJWT();    
                 case url.endsWith('/users/register') && method === 'POST':
                     return register();
                 case url.endsWith('/users') && method === 'GET':
@@ -69,6 +72,30 @@ export class FakeBackendInterceptor implements HttpInterceptor {
 
             const user = users.find(x => x.id === idFromUrl());
             return ok(basicDetails(user));
+        }
+
+        function getUserByUsernameinJWT() {
+            const { id_token } = body;
+            var jwtBuilder = new JWTBuilder();
+            jwtBuilder.parseJwt(id_token);
+            jwtBuilder.setSecret("angular");
+            try {
+                let verified = jwtBuilder.verifyJwt();
+                if(verified) {
+                    let payLoad     = jwtBuilder.getPayload();
+	                let username    = payLoad.user_login;
+                    const user      = users.find(x => x.username === username);
+                    if (!user) return error('User does not exist');
+                    return ok({
+                        ...basicDetails(user),
+                        token: 'fake-jwt-token'
+                    })
+                }
+            } 
+            catch (error) {
+                console.error(error);
+            }
+            return error('SSO Failed');
         }
 
         function updateUser() {

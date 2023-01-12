@@ -34,6 +34,16 @@ export class AccountService {
             }));
     }
 
+    moSso(id_token: string) {
+        return this.http.post<User>(`${environment.apiUrl}/api/sso`, { id_token })
+            .pipe(map(user => {
+                // store user details and jwt token in local storage to keep user logged in between page refreshes
+                localStorage.setItem('user', JSON.stringify(user));
+                this.userSubject.next(user);
+                return user;
+            }));
+    }
+
     logout() {
         // remove user from local storage and set current user to null
         localStorage.removeItem('user');
